@@ -1,0 +1,1231 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
+<meta name="theme-color" content="#0a0a0a"/>
+<title>Lyria — AI Alarm Companion</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none}
+html,body{margin:0;height:100%;background:#0a0a0a;font-family:'Courier New',monospace;overscroll-behavior:none}
+body{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:16px}
+:root{--accent:#ef4444;--rgb:239,68,68}
+
+/* ─── DEVICE ─── */
+.device{position:relative;width:100%;max-width:420px;border-radius:28px;padding:22px 22px 22px 46px;background:linear-gradient(145deg,#2a2a2e,#161618);box-shadow:0 25px 60px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.06),inset 0 -2px 4px rgba(0,0,0,.5)}
+.grille{position:absolute;left:12px;top:28px;bottom:28px;width:34px;border-radius:12px;background-image:repeating-linear-gradient(0deg,#0a0a0a 0,#0a0a0a 2px,#1f1f22 2px,#1f1f22 5px);box-shadow:inset 0 0 8px rgba(0,0,0,.8)}
+.header-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.tag{display:flex;align-items:center;gap:7px;color:#a3a3a3;font-size:10px;letter-spacing:.25em}
+.led-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 6px var(--accent);animation:ledPulse 2.4s ease-in-out infinite}
+@keyframes ledPulse{0%,100%{opacity:.4;transform:scale(.85)}50%{opacity:1;transform:scale(1.15)}}
+.btn-mini{display:flex;align-items:center;gap:4px;padding:5px 10px;border-radius:6px;font-size:10px;letter-spacing:.1em;background:#262626;color:#737373;border:1px solid #404040;box-shadow:inset 0 1px 2px rgba(0,0,0,.6);cursor:pointer;transition:transform .1s}
+.btn-mini:active{transform:translateY(1px) scale(.97)}
+.btn-mini.armed{color:var(--accent);border-color:rgba(var(--rgb),.5);box-shadow:0 0 8px rgba(var(--rgb),.45)}
+.theme-row{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.swatch{width:28px;height:28px;border-radius:50%;border:none;cursor:pointer;transition:transform .1s}
+.swatch:active{transform:scale(.9)}
+
+/* ─── SCREEN ─── */
+.screen{position:relative;border-radius:14px;padding:16px 14px 12px;overflow:hidden}
+.glare{position:absolute;top:-40px;left:-40px;width:66%;height:66%;transform:rotate(12deg);background:linear-gradient(120deg,rgba(255,255,255,.07),transparent 60%);pointer-events:none;z-index:5}
+.scanlines{position:absolute;inset:0;pointer-events:none;z-index:6;opacity:.4;background:repeating-linear-gradient(0deg,rgba(255,255,255,.025) 0,rgba(255,255,255,.025) 1px,transparent 1px,transparent 3px)}
+.particles-canvas{position:absolute;inset:0;pointer-events:none;z-index:4}
+
+/* ─── CLOCK ─── */
+.clock{text-align:center;position:relative;z-index:7}
+.clock-time{display:flex;align-items:flex-start;justify-content:center;gap:1px}
+.digit{font-family:'Orbitron','Courier New',monospace;font-size:min(13vw,3.6rem);line-height:1;letter-spacing:.02em;display:inline-block;transition:color .3s}
+.digit.flip{animation:digitFlip .3s ease}
+@keyframes digitFlip{0%{transform:rotateX(0)}45%{transform:rotateX(88deg);opacity:.3}55%{transform:rotateX(-88deg);opacity:.3}100%{transform:rotateX(0);opacity:1}}
+.colon{font-family:'Orbitron','Courier New',monospace;font-size:min(13vw,3.6rem);animation:colonBlink 1s steps(1) infinite;color:var(--accent)}
+@keyframes colonBlink{0%,49%{opacity:.75}50%,100%{opacity:.25}}
+.clock-sec{font-size:.9rem;vertical-align:top;margin-left:5px;margin-top:5px;opacity:.7;font-family:'Orbitron','Courier New',monospace;color:var(--accent)}
+.clock-date{font-size:10px;letter-spacing:.3em;margin-top:4px;color:rgba(var(--rgb),.7)}
+
+/* ─── ROBOT ─── */
+.robot-stage{position:relative;display:flex;justify-content:center;align-items:center;margin:6px 0 2px;height:130px;z-index:8;touch-action:none;cursor:pointer}
+#robotSvg{display:block;filter:drop-shadow(0 0 8px rgba(var(--rgb),.35))}
+#robotGroup{transform-origin:75px 78px;animation:robotFloat 4.5s ease-in-out infinite}
+@keyframes robotFloat{0%,100%{transform:translateY(0) rotate(0deg)}50%{transform:translateY(-4px) rotate(.6deg)}}
+.antenna-led{animation:ledPulse 1.6s ease-in-out infinite}
+.eyebrow{transition:d .3s ease}
+.eye-pupil{transition:opacity .15s;transform-origin:center}
+.pupil-g{will-change:transform}
+.mouth-path{transition:d .25s ease}
+.cheek{transition:opacity .35s}
+.tear-drop{transition:opacity .3s,transform 1s}
+.sweat-drop{transition:opacity .3s}
+.spiral{opacity:0;transition:opacity .2s}
+.spiral.on{opacity:1;animation:spinSpiral .55s linear infinite}
+@keyframes spinSpiral{to{transform:rotate(360deg)}}
+.laugh-star{opacity:0}
+.laugh-star.on{animation:laughPop .7s ease-out infinite}
+@keyframes laughPop{0%{opacity:0;transform:translateY(0) scale(.4)}30%{opacity:1}100%{opacity:0;transform:translateY(-16px) scale(1.1)}}
+.zzz-glyph{opacity:0}
+.zzz-glyph.on{animation:zzzFloat 2.2s ease-in-out infinite}
+@keyframes zzzFloat{0%{opacity:0;transform:translate(0,0) scale(.6)}20%{opacity:.9}100%{opacity:0;transform:translate(10px,-18px) scale(1.1)}}
+.blush{opacity:0;transition:opacity .3s}
+.blush.on{opacity:.55}
+.pop-mark{opacity:0;transition:opacity .25s,transform .25s}
+.pop-mark.on{opacity:1;animation:popMark .5s ease}
+@keyframes popMark{0%{transform:translateY(6px) scale(.5);opacity:0}60%{transform:translateY(-3px) scale(1.15)}100%{transform:translateY(0) scale(1);opacity:1}}
+#robotBody{transform-origin:75px 78px}
+#robotBody.shake{animation:robotShake .4s ease-in-out}
+#robotBody.nod{animation:robotNod .6s ease-in-out}
+#robotBody.bounce-anim{animation:robotBounce .35s ease-in-out infinite}
+@keyframes robotShake{0%,100%{transform:translateX(0) rotate(0)}20%{transform:translateX(-4px) rotate(-3deg)}40%{transform:translateX(4px) rotate(3deg)}60%{transform:translateX(-3px) rotate(-2deg)}80%{transform:translateX(3px) rotate(2deg)}}
+@keyframes robotNod{0%,100%{transform:rotate(0) translateY(0)}30%{transform:rotate(4deg) translateY(2px)}65%{transform:rotate(-3deg)}}
+@keyframes robotBounce{0%,100%{transform:translateY(0) scaleY(1)}50%{transform:translateY(-5px) scaleY(.97)}}
+
+.speech-bubble{position:absolute;top:-2px;left:50%;transform:translateX(-50%) translateY(-108%) scale(.85);background:rgba(0,0,0,.82);border:1px solid rgba(var(--rgb),.45);border-radius:10px;padding:5px 10px;font-size:10px;color:var(--accent);white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;z-index:9;max-width:230px;white-space:normal;text-align:center}
+.speech-bubble.show{opacity:1;transform:translateX(-50%) translateY(-108%) scale(1)}
+
+.face-label{text-align:center;font-size:9px;letter-spacing:.22em;opacity:.6;position:relative;z-index:7;color:rgba(var(--rgb),.6)}
+.mood-row{display:flex;align-items:center;gap:6px;margin-top:5px;position:relative;z-index:7}
+.mood-lbl{font-size:8px;letter-spacing:.15em;opacity:.5;min-width:30px}
+.mood-track{flex:1;height:4px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden}
+.mood-fill{height:100%;background:var(--accent);border-radius:3px;transition:width .5s,background .5s}
+
+.info-row{display:flex;justify-content:space-between;margin-top:8px;font-size:10px;position:relative;z-index:7;color:rgba(var(--rgb),.8)}
+.status-line{margin-top:6px;font-size:10px;letter-spacing:.2em;text-align:center;position:relative;z-index:7;color:rgba(var(--rgb),.7)}
+.lyrics-box{margin-top:6px;min-height:48px;position:relative;z-index:7}
+.lyric-line{text-align:center;font-size:11px;transition:opacity .4s,color .4s;opacity:.28}
+.lyric-line.active{opacity:1}
+#viz{width:100%;height:56px;display:block;margin-top:6px;position:relative;z-index:7}
+
+/* ─── CONTROLS ─── */
+.error-msg{margin-top:8px;font-size:10px;color:#d97706;text-align:center}
+.perm-box{margin-top:10px;padding:10px 12px;border-radius:8px;background:#171717;border:1px solid #404040}
+.perm-txt{font-size:10px;color:#a3a3a3;line-height:1.5;margin-bottom:8px}
+.perm-btn{width:100%;font-size:11px;letter-spacing:.1em;color:#0a0a0a;background:#e5e5e5;border:none;border-radius:6px;padding:9px;cursor:pointer;font-weight:700;transition:transform .1s}
+.perm-btn:active{transform:translateY(1px)}
+.field{margin-top:13px}
+.field label{display:flex;align-items:center;gap:6px;font-size:10px;color:#737373;letter-spacing:.1em;margin-bottom:5px}
+input[type="time"],textarea{width:100%;background:#171717;border:1px solid #404040;border-radius:6px;padding:9px 12px;color:#e5e5e5;outline:none;box-shadow:inset 0 1px 3px rgba(0,0,0,.7);font-family:inherit}
+input[type="time"]{font-family:'Orbitron','Courier New',monospace;font-size:18px;color:var(--accent)}
+textarea{resize:none;font-size:12px}
+textarea::placeholder{color:#525252}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;margin-top:12px}
+.toggle-lbl{font-size:10px;color:#a3a3a3;letter-spacing:.08em}
+.switch{position:relative;width:38px;height:20px}
+.switch input{opacity:0;width:0;height:0}
+.slider-t{position:absolute;cursor:pointer;inset:0;background:#262626;border:1px solid #404040;border-radius:20px;transition:background .2s}
+.slider-t:before{content:"";position:absolute;height:14px;width:14px;left:2px;top:2px;background:#737373;border-radius:50%;transition:transform .2s,background .2s}
+.switch input:checked+.slider-t{background:rgba(var(--rgb),.35);border-color:rgba(var(--rgb),.6)}
+.switch input:checked+.slider-t:before{transform:translateX(18px);background:var(--accent)}
+.ringtone-box{display:flex;align-items:center;justify-content:space-between;background:#171717;border:1px solid #404040;border-radius:6px;padding:9px 12px;font-size:11px;color:#d4d4d4}
+.ringtone-upload{display:flex;align-items:center;justify-content:center;gap:8px;background:#171717;border:1px dashed #404040;border-radius:6px;padding:11px 12px;font-size:11px;color:#737373;cursor:pointer}
+.hint{font-size:9px;color:#525252;margin-top:4px}
+.test-btn{width:100%;margin-top:13px;font-size:11px;letter-spacing:.2em;color:#d4d4d4;background:#262626;border:1px solid #404040;border-radius:6px;padding:11px;cursor:pointer;box-shadow:0 2px 0 rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.05);transition:transform .1s}
+.test-btn:disabled{opacity:.4;cursor:default}
+.test-btn:active:not(:disabled){transform:translateY(2px) scale(.99)}
+.alarm-controls{display:none;gap:8px;margin-top:8px}
+.alarm-controls button{flex:1;font-size:10px;letter-spacing:.1em;border-radius:6px;padding:9px 4px;cursor:pointer;border:1px solid #404040;background:#262626;transition:transform .1s}
+.alarm-controls button:active{transform:translateY(1px)}
+.btn-snooze{color:#facc15}
+.btn-stop{color:#f87171}
+.dev-credit{margin-top:13px;text-align:center;font-size:9px;color:#525252;letter-spacing:.2em}
+.x-btn{background:none;border:none;color:#737373;font-size:14px;cursor:pointer;padding:0 0 0 6px}
+
+/* ─── BOOT ─── */
+.boot-overlay{position:fixed;inset:0;background:#050505;z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;transition:opacity .5s}
+.boot-overlay.hide{opacity:0;pointer-events:none}
+.boot-logo{font-family:'Orbitron','Courier New',monospace;font-size:22px;letter-spacing:.3em;color:#ef4444;text-shadow:0 0 12px rgba(239,68,68,.7);animation:bootGlitch 2s infinite}
+@keyframes bootGlitch{0%,92%,100%{transform:translate(0,0);opacity:1}93%{transform:translate(-1px,1px);opacity:.8}95%{transform:translate(1px,-1px);opacity:.8}}
+.boot-sub{font-size:10px;letter-spacing:.25em;color:#737373}
+.boot-bar-track{width:200px;height:4px;background:#1a1a1a;border-radius:3px;overflow:hidden;border:1px solid #2a2a2a}
+.boot-bar-fill{height:100%;width:0;background:#ef4444;box-shadow:0 0 8px #ef4444;transition:width .1s linear}
+</style>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&display=swap" onerror="this.remove()">
+</head>
+<body>
+
+<!-- BOOT -->
+<div class="boot-overlay" id="bootOverlay">
+  <div class="boot-logo">LYRIA OS</div>
+  <div class="boot-sub" id="bootSub">INITIALIZING COMPANION...</div>
+  <div class="boot-bar-track"><div class="boot-bar-fill" id="bootBar"></div></div>
+</div>
+
+<div class="device">
+  <div class="grille"></div>
+  <div class="header-row">
+    <div class="tag"><span class="led-dot"></span>LYRIA</div>
+    <div style="display:flex;gap:6px">
+      <button class="btn-mini" id="themeBtn">🎨 TEMA</button>
+      <button class="btn-mini" id="armBtn">⏻ OFF</button>
+    </div>
+  </div>
+  <div class="theme-row" id="themeRow" style="display:none"></div>
+
+  <div class="screen" id="screen">
+    <div class="glare"></div>
+    <div class="scanlines"></div>
+    <canvas class="particles-canvas" id="particlesCanvas"></canvas>
+
+    <div class="clock">
+      <div class="clock-time">
+        <span class="digit" id="dH1">0</span><span class="digit" id="dH2">0</span>
+        <span class="colon">:</span>
+        <span class="digit" id="dM1">0</span><span class="digit" id="dM2">0</span>
+        <span class="clock-sec" id="clockSec">00</span>
+      </div>
+      <div class="clock-date" id="clockDate">—</div>
+    </div>
+
+    <!-- ROBOT SVG -->
+    <div class="robot-stage" id="robotStage">
+      <div class="speech-bubble" id="speechBubble">Halo!</div>
+      <svg id="robotSvg" width="150" height="130" viewBox="0 0 150 130" style="color:var(--accent)">
+        <g id="robotGroup">
+          <line x1="75" y1="14" x2="75" y2="24" stroke="currentColor" stroke-width="2.5" opacity=".8"/>
+          <circle class="antenna-led" cx="75" cy="10" r="4" fill="currentColor"/>
+          <g id="robotBody">
+            <rect x="24" y="24" width="102" height="78" rx="26" fill="none" stroke="currentColor" stroke-width="2.5" opacity=".9"/>
+            <circle cx="22" cy="63" r="3.5" fill="currentColor" opacity=".5"/>
+            <circle cx="128" cy="63" r="3.5" fill="currentColor" opacity=".5"/>
+            <!-- eyebrows -->
+            <path class="eyebrow" id="browL" d="M39 48 Q50 43 61 48" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+            <path class="eyebrow" id="browR" d="M89 48 Q100 43 111 48" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+            <!-- eyes -->
+            <g class="pupil-g" id="eyeGL">
+              <ellipse id="eyeBgL" cx="50" cy="62" rx="11" ry="11" fill="currentColor" opacity=".12"/>
+              <ellipse class="eye-pupil" id="pupilL" cx="50" cy="62" rx="6.5" ry="9" fill="currentColor"/>
+              <g class="spiral" id="spiralL" style="transform-origin:50px 62px">
+                <path d="M50,55 a7,7 0 1 1 -5,2 a4,4 0 1 0 3,-1.5" stroke="currentColor" stroke-width="1.6" fill="none"/>
+              </g>
+            </g>
+            <g class="pupil-g" id="eyeGR">
+              <ellipse id="eyeBgR" cx="100" cy="62" rx="11" ry="11" fill="currentColor" opacity=".12"/>
+              <ellipse class="eye-pupil" id="pupilR" cx="100" cy="62" rx="6.5" ry="9" fill="currentColor"/>
+              <g class="spiral" id="spiralR" style="transform-origin:100px 62px">
+                <path d="M100,55 a7,7 0 1 1 -5,2 a4,4 0 1 0 3,-1.5" stroke="currentColor" stroke-width="1.6" fill="none"/>
+              </g>
+            </g>
+            <!-- cheeks -->
+            <circle class="cheek" id="cheekL" cx="37" cy="76" r="7" fill="currentColor"/>
+            <circle class="cheek" id="cheekR" cx="113" cy="76" r="7" fill="currentColor"/>
+            <!-- blush -->
+            <circle class="blush" id="blushL" cx="37" cy="76" r="9" fill="#fb7185"/>
+            <circle class="blush" id="blushR" cx="113" cy="76" r="9" fill="#fb7185"/>
+            <!-- sweat -->
+            <path class="sweat-drop" id="sweatD" d="M118 50 q-4 7 0 12 q4-5 0-12Z" fill="#38bdf8"/>
+            <!-- tear -->
+            <path class="tear-drop" id="tearD" d="M39 70 q-3 7 0 12 q3-5 0-12Z" fill="#38bdf8"/>
+            <!-- mouth -->
+            <path class="mouth-path" id="mouthP" d="M55 84 Q75 92 95 84" stroke="currentColor" stroke-width="3.2" fill="none" stroke-linecap="round"/>
+            <!-- marks -->
+            <text class="pop-mark" id="qMark" x="106" y="38" font-size="16" fill="currentColor" font-family="Orbitron,monospace">?</text>
+            <text class="pop-mark" id="eMark" x="106" y="38" font-size="16" fill="currentColor" font-family="Orbitron,monospace">!</text>
+            <!-- zzz -->
+            <text class="zzz-glyph" id="zzz1" x="110" y="42" font-size="12" fill="currentColor">z</text>
+            <text class="zzz-glyph" id="zzz2" x="118" y="33" font-size="9" fill="currentColor">z</text>
+            <!-- laugh -->
+            <text class="laugh-star" id="star1" x="13" y="46" font-size="11" fill="currentColor">✦</text>
+            <text class="laugh-star" id="star2" x="133" y="40" font-size="11" fill="currentColor">✦</text>
+          </g>
+        </g>
+      </svg>
+    </div>
+    <div class="face-label" id="faceLabel">SIAGA</div>
+    <div class="mood-row">
+      <span class="mood-lbl">MOOD</span>
+      <div class="mood-track"><div class="mood-fill" id="moodFill" style="width:70%"></div></div>
+    </div>
+
+    <div class="info-row">
+      <span id="coordLbl">📍 — , —</span>
+      <span id="weatherLbl">⛅ — --°C</span>
+    </div>
+    <div class="status-line" id="statusLine">System Ready</div>
+    <div class="lyrics-box" id="lyricsBox"></div>
+    <canvas id="viz"></canvas>
+  </div>
+
+  <div class="error-msg" id="errorMsg" style="display:none"></div>
+
+  <div class="perm-box" id="permBox" style="display:none">
+    <div class="perm-txt" id="permTxt">Lyria butuh izin lokasi untuk membaca cuaca pagimu.</div>
+    <button class="perm-btn" id="permBtn">📍 IZINKAN LOKASI &amp; CUACA</button>
+  </div>
+
+  <div class="field">
+    <label>⏰ WAKTU ALARM</label>
+    <input type="time" id="alarmTime"/>
+  </div>
+  <div class="toggle-row">
+    <span class="toggle-lbl">🔁 ULANGI SETIAP HARI</span>
+    <label class="switch"><input type="checkbox" id="repeatDaily" checked/><span class="slider-t"></span></label>
+  </div>
+  <div class="field">
+    <label>📋 AGENDA HARI INI</label>
+    <textarea id="agenda" rows="3" placeholder="08:00 Rapat tim, 12:00 Makan siang, 19:00 Lari sore..."></textarea>
+  </div>
+  <div class="field">
+    <label>🎵 NADA DERING (OPSIONAL)</label>
+    <div id="ringtoneArea">
+      <label class="ringtone-upload">🎵 Pilih file audio dari perangkat
+        <input type="file" id="ringtoneInput" accept="audio/*,audio/mpeg,audio/mp3,audio/wav,audio/ogg,audio/aac" style="display:none"/>
+      </label>
+    </div>
+    <div class="hint" id="ringtoneHint">Tanpa nada dering, Lyria memakai melodi bawaan.</div>
+  </div>
+  <button class="test-btn" id="testBtn">▶ TES SIARAN SEKARANG</button>
+  <div class="alarm-controls" id="alarmControls">
+    <button class="btn-snooze" id="snoozeBtn">⏰ SNOOZE 5 MNT</button>
+    <button class="btn-stop" id="stopBtn">⏹ STOP ALARM</button>
+  </div>
+  <div class="hint" id="armHint" style="margin-top:8px;text-align:center"></div>
+  <div class="dev-credit">DEV: AIZULRAMDN27</div>
+</div>
+
+<script>
+/* ================================================================
+   LYRIA ALARM CLOCK — AI COMPANION  |  Dev: AIZULRAMDN27
+   Single-file build — no API key, no backend, no build tool.
+   Fully offline-capable after first load (font = only external dep).
+   ================================================================ */
+(function(){
+"use strict";
+
+/* ═══════════════════════════════════════════════════
+   § UTILITY
+═══════════════════════════════════════════════════ */
+function pad(n){return String(n).padStart(2,"0")}
+function clamp(v,a,b){return v<a?a:v>b?b:v}
+function rand(a,b){return Math.random()*(b-a)+a}
+function pick(arr){return arr[Math.floor(Math.random()*arr.length)]}
+function el(id){return document.getElementById(id)}
+function safe(fn){try{fn()}catch(e){console.warn("[Lyria]",e)}}
+
+/* ═══════════════════════════════════════════════════
+   § STORAGE — localStorage wrapper with JSON + default
+═══════════════════════════════════════════════════ */
+var LS={
+  get:function(k,def){try{var v=localStorage.getItem("lyria_"+k);return v!==null?JSON.parse(v):def}catch(e){return def}},
+  set:function(k,v){try{localStorage.setItem("lyria_"+k,JSON.stringify(v))}catch(e){}}
+};
+
+/* ═══════════════════════════════════════════════════
+   § THEMES
+═══════════════════════════════════════════════════ */
+var THEMES=[
+  {id:"crimson",label:"Crimson",accent:"#ef4444",rgb:"239,68,68",screenBg:"radial-gradient(ellipse at 30% 20%,#1a0606,#050202 75%)"},
+  {id:"amber",label:"Amber",accent:"#f59e0b",rgb:"245,158,11",screenBg:"radial-gradient(ellipse at 30% 20%,#1f1505,#070501 75%)"},
+  {id:"phosphor",label:"Phosphor",accent:"#22c55e",rgb:"34,197,94",screenBg:"radial-gradient(ellipse at 30% 20%,#07150a,#020502 75%)"},
+  {id:"ice",label:"Ice",accent:"#38bdf8",rgb:"56,189,248",screenBg:"radial-gradient(ellipse at 30% 20%,#06141f,#020407 75%)"},
+  {id:"violet",label:"Violet",accent:"#a855f7",rgb:"168,85,247",screenBg:"radial-gradient(ellipse at 30% 20%,#150620,#050207 75%)"}
+];
+var themeIdx=LS.get("theme",0);
+function T(){return THEMES[themeIdx]}
+function applyTheme(){
+  var t=T();
+  document.documentElement.style.setProperty("--accent",t.accent);
+  document.documentElement.style.setProperty("--rgb",t.rgb);
+  el("screen").style.background=t.screenBg;
+  renderThemeRow();
+  renderLyrics();
+}
+function renderThemeRow(){
+  var row=el("themeRow");row.innerHTML="";
+  THEMES.forEach(function(t,i){
+    var b=document.createElement("button");
+    b.className="swatch";b.title=t.label;
+    b.style.background=t.accent;
+    b.style.boxShadow=i===themeIdx?"0 0 0 2px #161618,0 0 0 4px "+t.accent:"0 1px 3px rgba(0,0,0,.6)";
+    b.onclick=function(){themeIdx=i;LS.set("theme",i);applyTheme()};
+    row.appendChild(b);
+  });
+}
+el("themeBtn").onclick=function(){
+  var r=el("themeRow");r.style.display=r.style.display==="none"?"flex":"none";
+};
+
+/* ═══════════════════════════════════════════════════
+   § APP STATE
+═══════════════════════════════════════════════════ */
+var state={
+  armed:false, playing:false, alarmAnnouncing:false,
+  triggered:false, mood:70, robotState:"idle", expression:"netral",
+  coords:null, weather:null,
+  ringtoneUrl:null, ringtoneEl:null, ringtoneSourceCreated:false,
+  audioCtx:null, analyserNode:null, masterGain:null,
+  activeLyricInterval:null, pendingTimers:[],
+  activeLyrics:[], activeLine:-1,
+  prevDigits:{h1:"-",h2:"-",m1:"-",m2:"-"}
+};
+
+/* ═══════════════════════════════════════════════════
+   § AUDIO CONTEXT — singleton, primed on user gesture
+═══════════════════════════════════════════════════ */
+function getAudioCtx(){
+  if(!state.audioCtx){
+    var AC=window.AudioContext||window.webkitAudioContext;
+    if(!AC){return null}
+    try{state.audioCtx=new AC()}catch(e){return null}
+  }
+  if(state.audioCtx.state==="suspended"){
+    state.audioCtx.resume().catch(function(){});
+  }
+  return state.audioCtx;
+}
+function getAnalyser(){
+  if(state.analyserNode)return state.analyserNode;
+  var ctx=getAudioCtx();if(!ctx)return null;
+  state.analyserNode=ctx.createAnalyser();
+  state.analyserNode.fftSize=64;
+  state.analyserNode.connect(ctx.destination);
+  return state.analyserNode;
+}
+
+/* ═══════════════════════════════════════════════════
+   § ROBOT BEEP (electronic sfx, no TTS needed)
+═══════════════════════════════════════════════════ */
+function robotBeep(f1,f2,dur){
+  safe(function(){
+    var ctx=getAudioCtx();if(!ctx)return;
+    var osc=ctx.createOscillator(),g=ctx.createGain();
+    var t=ctx.currentTime;
+    osc.type="sine";
+    osc.frequency.setValueAtTime(f1,t);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(20,f2),t+dur);
+    g.gain.setValueAtTime(.0001,t);
+    g.gain.exponentialRampToValueAtTime(.11,t+.02);
+    g.gain.exponentialRampToValueAtTime(.0001,t+dur);
+    osc.connect(g);g.connect(ctx.destination);
+    osc.start(t);osc.stop(t+dur+.04);
+  });
+}
+
+/* ═══════════════════════════════════════════════════
+   § SPEECH (Web Speech API + fallback beep)
+═══════════════════════════════════════════════════ */
+var voiceCache=[];
+function loadVoices(){
+  if(!window.speechSynthesis)return;
+  voiceCache=window.speechSynthesis.getVoices();
+}
+safe(function(){
+  if(window.speechSynthesis){
+    loadVoices();
+    window.speechSynthesis.onvoiceschanged=loadVoices;
+  }
+});
+function pickVoice(){
+  var v=voiceCache.find(function(v){return /id[-_]ID|Indonesia/i.test(v.lang)});
+  return v||voiceCache[0]||null;
+}
+
+var talkTimer=null;
+function startMouthTalk(){
+  stopMouthTalk();
+  var open=false;
+  talkTimer=setInterval(function(){
+    open=!open;
+    el("mouthP").setAttribute("d",open?"M53 82 Q75 98 97 82":"M56 86 Q75 89 94 86");
+  },125);
+}
+function stopMouthTalk(){if(talkTimer){clearInterval(talkTimer);talkTimer=null}}
+
+function speak(text){
+  return new Promise(function(resolve){
+    if(!text){resolve();return}
+    var old=state.robotState;
+    state.robotState="speaking";
+    setExpr("dengarkan");
+    startMouthTalk();
+    function done(){
+      stopMouthTalk();
+      if(state.robotState==="speaking")state.robotState=old||"idle";
+      if(state.robotState==="idle")setExpr("netral");
+      resolve();
+    }
+    if(window.speechSynthesis&&window.SpeechSynthesisUtterance){
+      try{
+        window.speechSynthesis.cancel();
+        var u=new SpeechSynthesisUtterance(text);
+        u.lang="id-ID";u.pitch=1.35;u.rate=1.05;
+        var v=pickVoice();if(v)u.voice=v;
+        u.onend=done;u.onerror=done;
+        window.speechSynthesis.speak(u);
+        // safety timeout: some mobile browsers never fire onend
+        var guard=setTimeout(function(){
+          if(talkTimer){safe(function(){window.speechSynthesis.cancel()});done()}
+        },Math.max(1500,text.length*100));
+        u.onend=function(){clearTimeout(guard);done()};
+        return;
+      }catch(e){}
+    }
+    // fallback: beep sequence
+    var steps=Math.min(5,Math.max(2,Math.ceil(text.length/12)));
+    for(var i=0;i<steps;i++){(function(ii){setTimeout(function(){robotBeep(480+ii*45,350,.12)},ii*160)})(i)}
+    setTimeout(done,steps*160+200);
+  });
+}
+function speakSeq(lines){
+  return lines.reduce(function(p,line){
+    return p.then(function(){showBubble(line,1800);return speak(line)});
+  },Promise.resolve());
+}
+
+/* ═══════════════════════════════════════════════════
+   § SPEECH BUBBLE
+═══════════════════════════════════════════════════ */
+var bubTimer=null;
+function showBubble(txt,ms){
+  var b=el("speechBubble");b.textContent=txt;b.classList.add("show");
+  clearTimeout(bubTimer);
+  bubTimer=setTimeout(function(){b.classList.remove("show")},ms||2600);
+}
+
+/* ═══════════════════════════════════════════════════
+   § EXPRESSIONS
+═══════════════════════════════════════════════════ */
+var EXPR={
+  netral:   {label:"NETRAL",  mouth:"M55 84 Q75 88 95 84", bL:"M39 48 Q50 45 61 48", bR:"M89 48 Q100 45 111 48", ry:9,rx:7,   ch:0,  tr:0,  sw:0,  sp:false,q:false,e:false,zz:false,la:false,bl:0},
+  senang:   {label:"SENANG",  mouth:"M53 83 Q75 96 97 83",  bL:"M39 46 Q50 42 61 47", bR:"M89 47 Q100 42 111 46", ry:8,rx:7.5, ch:.45,tr:0,  sw:0,  sp:false,q:false,e:false,zz:false,la:false,bl:0},
+  tersenyum:{label:"SENYUM",  mouth:"M56 84 Q75 92 94 84",  bL:"M39 47 Q50 44 61 47", bR:"M89 47 Q100 44 111 47", ry:7.5,rx:7.5,ch:.55,tr:0,sw:0,  sp:false,q:false,e:false,zz:false,la:false,bl:0},
+  tertawa:  {label:"TERTAWA", mouth:"M50 80 Q75 104 100 80 Q75 92 50 80Z", bL:"M39 44 Q50 40 61 45", bR:"M89 45 Q100 40 111 44", ry:2.5,rx:9, ch:.9, tr:0,  sw:0,  sp:false,q:false,e:false,zz:false,la:true, bl:0},
+  tidur:    {label:"TIDUR",   mouth:"M62 86 Q75 88 88 86",  bL:"M39 49 Q50 49 61 49", bR:"M89 49 Q100 49 111 49", ry:1,rx:9,   ch:0,  tr:0,  sw:0,  sp:false,q:false,e:false,zz:true, la:false,bl:0},
+  mengantuk:{label:"MENGANTUK",mouth:"M58 86 Q75 89 92 86", bL:"M39 49 Q50 47 61 50", bR:"M89 50 Q100 47 111 49", ry:3.5,rx:8, ch:.15,tr:0,  sw:0,  sp:false,q:false,e:false,zz:true, la:false,bl:0},
+  marah:    {label:"MARAH",   mouth:"M55 90 Q75 80 95 90",  bL:"M39 44 L61 50",       bR:"M111 44 L89 50",       ry:6,rx:6.5, ch:0,  tr:0,  sw:0,  sp:false,q:false,e:true, zz:false,la:false,bl:0},
+  kesal:    {label:"KESAL",   mouth:"M56 88 Q75 84 94 88",  bL:"M39 45 L61 49",       bR:"M111 45 L89 49",       ry:5.5,rx:6.5,ch:0, tr:0,  sw:.6, sp:false,q:false,e:true, zz:false,la:false,bl:0},
+  sedih:    {label:"SEDIH",   mouth:"M55 90 Q75 80 95 90",  bL:"M39 50 Q50 45 61 47", bR:"M89 47 Q100 45 111 50", ry:8,rx:6.5, ch:0,  tr:1,  sw:0,  sp:false,q:false,e:false,zz:false,la:false,bl:0},
+  menangis: {label:"MENANGIS",mouth:"M52 92 Q75 78 98 92",  bL:"M39 51 Q50 46 61 48", bR:"M89 48 Q100 46 111 51", ry:9,rx:6,   ch:0,  tr:1,  sw:0,  sp:false,q:false,e:false,zz:false,la:false,bl:0},
+  bingung:  {label:"BINGUNG", mouth:"M58 86 Q68 90 75 86 Q82 82 92 86", bL:"M39 46 Q50 50 61 45", bR:"M89 44 Q100 47 111 49", ry:8,rx:7,ch:0,tr:0,sw:0,sp:false,q:true, e:false,zz:false,la:false,bl:0},
+  kaget:    {label:"KAGET",   mouth:"M68 82 a7 7 0 1 0 14 0 a7 7 0 1 0-14 0", bL:"M37 42 Q50 36 61 43", bR:"M89 43 Q100 36 113 42", ry:11,rx:9,ch:0,tr:0,sw:0,sp:false,q:false,e:true,zz:false,la:false,bl:0},
+  takut:    {label:"TAKUT",   mouth:"M60 88 Q75 84 90 88",  bL:"M39 47 Q50 42 61 46", bR:"M89 46 Q100 42 111 47", ry:10,rx:6,  ch:0,  tr:0,  sw:.8, sp:false,q:false,e:false,zz:false,la:false,bl:0},
+  pusing:   {label:"PUSING",  mouth:"M58 88 Q75 82 92 88",  bL:"M39 48 Q50 44 61 48", bR:"M89 48 Q100 44 111 48", ry:9,rx:7,   ch:0,  tr:0,  sw:0,  sp:true, q:false,e:false,zz:false,la:false,bl:0},
+  error:    {label:"ERROR",   mouth:"M56 86 L94 86",         bL:"M39 45 L61 49",       bR:"M111 45 L89 49",       ry:1.5,rx:9,ch:0,  tr:0,  sw:0,  sp:false,q:false,e:true, zz:false,la:false,bl:0},
+  bahagia:  {label:"BAHAGIA", mouth:"M50 82 Q75 100 100 82",bL:"M39 45 Q50 41 61 46", bR:"M89 46 Q100 41 111 45", ry:7,rx:8,   ch:.7, tr:0,  sw:0,  sp:false,q:false,e:false,zz:false,la:false,bl:0},
+  malu:     {label:"MALU",    mouth:"M58 85 Q75 90 92 85",  bL:"M39 48 Q50 46 61 48", bR:"M89 48 Q100 46 111 48", ry:6.5,rx:7, ch:.2, tr:0,  sw:0,  sp:false,q:false,e:false,zz:false,la:false,bl:0.7},
+  memohon:  {label:"MEMOHON", mouth:"M58 88 Q75 84 92 88",  bL:"M39 49 Q50 44 61 47", bR:"M89 47 Q100 44 111 49", ry:10,rx:7.5,ch:0,  tr:.3, sw:0,  sp:false,q:false,e:false,zz:false,la:false,bl:0},
+  berpikir: {label:"BERPIKIR",mouth:"M60 87 Q75 85 90 87",  bL:"M39 46 Q50 43 61 47", bR:"M89 48 Q100 45 111 47", ry:6,rx:7,   ch:0,  tr:0,  sw:0,  sp:false,q:false,e:false,zz:false,la:false,bl:0},
+  fokus:    {label:"FOKUS",   mouth:"M58 87 L92 87",         bL:"M39 47 L61 47",       bR:"M89 47 L111 47",       ry:5.5,rx:7.5,ch:0, tr:0,  sw:0,  sp:false,q:false,e:false,zz:false,la:false,bl:0},
+  dengarkan:{label:"DENGARKAN",mouth:"M60 86 Q75 89 90 86", bL:"M39 47 Q50 44 61 47", bR:"M89 47 Q100 44 111 47", ry:7.5,rx:7.5,ch:.25,tr:0,sw:0,sp:false,q:false,e:false,zz:false,la:false,bl:0},
+  bernyanyi:{label:"BERNYANYI",mouth:"M58 82 Q75 98 92 82", bL:"M39 45 Q50 41 61 46", bR:"M89 46 Q100 41 111 45", ry:6,rx:8,   ch:.6, tr:0,  sw:0,  sp:false,q:false,e:false,zz:false,la:false,bl:0}
+};
+
+function setExpr(key,opts){
+  var e=EXPR[key];if(!e){key="netral";e=EXPR.netral}
+  state.expression=key;opts=opts||{};
+  el("mouthP").setAttribute("d",e.mouth);
+  el("browL").setAttribute("d",e.bL);
+  el("browR").setAttribute("d",e.bR);
+  el("pupilL").setAttribute("ry",e.ry);el("pupilL").setAttribute("rx",e.rx);
+  el("pupilR").setAttribute("ry",e.ry);el("pupilR").setAttribute("rx",e.rx);
+  el("pupilL").style.opacity=e.sp?0:1;el("pupilR").style.opacity=e.sp?0:1;
+  el("spiralL").classList.toggle("on",e.sp);
+  el("spiralR").classList.toggle("on",e.sp);
+  el("cheekL").style.opacity=e.ch;el("cheekR").style.opacity=e.ch;
+  el("tearD").style.opacity=e.tr;
+  el("sweatD").style.opacity=e.sw;
+  el("blushL").classList.toggle("on",e.bl>0);
+  el("blushR").classList.toggle("on",e.bl>0);
+  el("qMark").classList.toggle("on",e.q);
+  el("eMark").classList.toggle("on",e.e);
+  el("zzz1").classList.toggle("on",e.zz);
+  el("zzz2").classList.toggle("on",e.zz);
+  el("star1").classList.toggle("on",e.la);
+  el("star2").classList.toggle("on",e.la);
+  el("faceLabel").textContent=e.label;
+  if(opts.shake)bumpBody("shake",400);
+  if(opts.nod)bumpBody("nod",600);
+  if(opts.bounce)el("robotBody").classList.add("bounce-anim");
+  else if(!opts.keepBounce)el("robotBody").classList.remove("bounce-anim");
+}
+function bumpBody(cls,ms){
+  var b=el("robotBody");b.classList.add(cls);
+  setTimeout(function(){b.classList.remove(cls)},ms);
+}
+
+/* ─── IDLE CYCLE ─── */
+var IDLE_HIGH=["senang","tersenyum","bahagia","netral","dengarkan"];
+var IDLE_MID=["netral","mengantuk","berpikir","netral"];
+var IDLE_LOW=["sedih","kesal","mengantuk","netral"];
+var idleIdx=0;
+function idlePool(){return state.mood>=70?IDLE_HIGH:state.mood>=35?IDLE_MID:IDLE_LOW}
+var idleCycleId=setInterval(function(){
+  if(state.robotState!=="idle")return;
+  var pool=idlePool();
+  idleIdx=(idleIdx+1)%pool.length;
+  setExpr(pool[idleIdx]);
+  var r=Math.random();
+  if(r<.15)eyeGlance(Math.random()>.5?1:-1);
+  else if(r<.28)bumpBody("nod",600);
+},3400);
+setExpr("netral");
+
+/* ═══════════════════════════════════════════════════
+   § MOOD
+═══════════════════════════════════════════════════ */
+function changeMood(d){
+  state.mood=clamp(state.mood+d,0,100);
+  el("moodFill").style.width=state.mood+"%";
+  el("moodFill").style.background=state.mood<35?"#f87171":state.mood<70?"#facc15":T().accent;
+}
+changeMood(0);
+
+/* ═══════════════════════════════════════════════════
+   § EYE TRACKING
+═══════════════════════════════════════════════════ */
+var eyeTarget={x:0,y:0},eyeCur={x:0,y:0};
+state.pointerActive=false;
+function eyeFromClient(cx,cy){
+  var r=el("robotSvg").getBoundingClientRect();
+  eyeTarget.x=clamp((cx-(r.left+r.width/2))/(r.width/2),-1,1)*3.2;
+  eyeTarget.y=clamp((cy-(r.top+r.height/2))/(r.height/2),-1,1)*2.4;
+}
+function resetEye(){eyeTarget.x=0;eyeTarget.y=0}
+function eyeGlance(dir){
+  eyeTarget.x=dir*3.2;eyeTarget.y=0;
+  setTimeout(function(){if(!state.pointerActive)resetEye()},950);
+}
+(function eyeLoop(){
+  eyeCur.x+=(eyeTarget.x-eyeCur.x)*.16;
+  eyeCur.y+=(eyeTarget.y-eyeCur.y)*.16;
+  var t="translate("+eyeCur.x.toFixed(2)+"px,"+eyeCur.y.toFixed(2)+"px)";
+  el("eyeGL").style.transform=t;
+  el("eyeGR").style.transform=t;
+  requestAnimationFrame(eyeLoop);
+})();
+
+/* ═══════════════════════════════════════════════════
+   § GESTURE HANDLING
+═══════════════════════════════════════════════════ */
+var tapTS=[],tapBurst=[],tapBurstTmr=null,pdInfo=null,lpTmr=null;
+var LP_MS=550,MOVE_THRESH=18;
+
+function onSingleTap(cx,cy){
+  eyeFromClient(cx,cy);
+  setTimeout(resetEye,1000);
+  setExpr("dengarkan");robotBeep(700,480,.11);
+  setTimeout(function(){if(state.robotState==="idle")setExpr(idlePool()[0])},1100);
+  changeMood(1);
+}
+function onDoubleTap(){
+  state.robotState="dizzy";
+  setExpr("pusing",{shake:true});
+  robotBeep(300,110,.25);showBubble("Aduh...");
+  speak("Aduh.");changeMood(-2);
+  setTimeout(function(){state.robotState="idle";setExpr("netral")},1800);
+}
+function onTripleTap(){
+  state.robotState="angry";
+  setExpr("marah",{shake:true});
+  showBubble("Hei...!");speak("Hei!");changeMood(-5);
+  setTimeout(function(){state.robotState="idle";setExpr("netral")},1800);
+}
+function onSpamTap(){
+  state.robotState="annoyed";
+  setExpr("kesal",{shake:true});
+  showBubble("Tolong jangan dipencet terus.");
+  speak("Tolong jangan dipencet terus.");changeMood(-10);
+  setTimeout(function(){state.robotState="idle";setExpr("netral")},2400);
+}
+function onSwipePet(){
+  state.robotState="happy";
+  setExpr("tersenyum",{nod:true});
+  showBubble("Hehe~");speak("Hehe.");changeMood(6);
+  setTimeout(function(){state.robotState="idle";setExpr("senang")},1600);
+}
+function onLongPress(cx,cy){
+  eyeFromClient(cx,cy);
+  state.robotState="confused";setExpr("bingung");
+  showBubble("Hmm? Ada apa?");robotBeep(500,650,.18);changeMood(1);
+  setTimeout(function(){resetEye();if(state.robotState==="confused"){state.robotState="idle";setExpr("netral")}},1800);
+}
+
+var stage=el("robotStage");
+stage.addEventListener("pointerdown",function(ev){
+  state.pointerActive=true;
+  pdInfo={x:ev.clientX,y:ev.clientY,t:Date.now(),moved:false,isLP:false};
+  eyeFromClient(ev.clientX,ev.clientY);
+  lpTmr=setTimeout(function(){
+    if(pdInfo&&!pdInfo.moved){pdInfo.isLP=true;onLongPress(ev.clientX,ev.clientY)}
+  },LP_MS);
+});
+stage.addEventListener("pointermove",function(ev){
+  eyeFromClient(ev.clientX,ev.clientY);
+  if(!pdInfo)return;
+  var dx=ev.clientX-pdInfo.x,dy=ev.clientY-pdInfo.y;
+  if(Math.sqrt(dx*dx+dy*dy)>MOVE_THRESH){pdInfo.moved=true;pdInfo.dist=Math.sqrt(dx*dx+dy*dy)}
+});
+stage.addEventListener("pointerup",function(ev){
+  state.pointerActive=false;clearTimeout(lpTmr);
+  setTimeout(resetEye,480);
+  if(!pdInfo)return;
+  var info=pdInfo;pdInfo=null;
+  if(info.isLP)return;
+  if(info.moved&&info.dist>MOVE_THRESH){
+    var dur=Date.now()-info.t;if(dur>220){onSwipePet();return}
+    return;
+  }
+  // count spam
+  var now2=Date.now();
+  tapBurst.push(now2);tapBurst=tapBurst.filter(function(t){return now2-t<2400});
+  if(tapBurst.length>=6){onSpamTap();tapBurst=[];return}
+  tapTS.push(now2);tapTS=tapTS.filter(function(t){return now2-t<430});
+  clearTimeout(tapBurstTmr);
+  var snap=tapTS.slice();
+  tapBurstTmr=setTimeout(function(){
+    if(snap.length>=3)onTripleTap();
+    else if(snap.length===2)onDoubleTap();
+    else onSingleTap(ev.clientX,ev.clientY);
+    tapTS=[];
+  },390);
+});
+stage.addEventListener("pointercancel",function(){pdInfo=null;clearTimeout(lpTmr);resetEye()});
+
+/* ═══════════════════════════════════════════════════
+   § CLOCK  — flip digit animation
+═══════════════════════════════════════════════════ */
+function flipDigit(id,key,val){
+  var e=el(id);
+  if(state.prevDigits[key]!==val){
+    state.prevDigits[key]=val;
+    e.textContent=val;
+    e.classList.remove("flip");
+    void e.offsetWidth;
+    e.classList.add("flip");
+  }
+  e.style.color=T().accent;
+  e.style.textShadow="0 0 6px rgba("+T().rgb+",.85),0 0 18px rgba("+T().rgb+",.5),0 0 36px rgba("+T().rgb+",.22)";
+}
+function tickClock(){
+  var now=new Date();
+  var hh=pad(now.getHours()),mm=pad(now.getMinutes());
+  flipDigit("dH1","h1",hh[0]);flipDigit("dH2","h2",hh[1]);
+  flipDigit("dM1","m1",mm[0]);flipDigit("dM2","m2",mm[1]);
+  el("clockSec").textContent=pad(now.getSeconds());
+  el("clockDate").textContent=now.toLocaleDateString("id-ID",{weekday:"long",day:"numeric",month:"long"}).toUpperCase();
+  checkAlarm(now);
+}
+setInterval(tickClock,1000);tickClock();
+document.addEventListener("visibilitychange",function(){if(!document.hidden)tickClock()});
+
+/* ═══════════════════════════════════════════════════
+   § PARTICLES
+═══════════════════════════════════════════════════ */
+(function(){
+  var canvas=el("particlesCanvas"),ctx=canvas.getContext("2d");
+  var dpr=window.devicePixelRatio||1;
+  function resize(){canvas.width=canvas.clientWidth*dpr;canvas.height=canvas.clientHeight*dpr}
+  resize();window.addEventListener("resize",resize);
+  var pts=[];for(var i=0;i<12;i++)pts.push({x:Math.random(),y:Math.random(),r:.7+Math.random()*1.5,spd:9e-5+Math.random()*1.3e-4,ph:Math.random()*Math.PI*2});
+  function draw(t){
+    var w=canvas.width,h=canvas.height;ctx.clearRect(0,0,w,h);
+    var rgb=T().rgb;
+    pts.forEach(function(p){
+      var yy=(p.y+Math.sin(t*p.spd+p.ph)*.04)*h;
+      var xx=p.x*w+Math.cos(t*p.spd*.7+p.ph)*7;
+      var al=.18+.11*Math.sin(t*p.spd*3+p.ph);
+      ctx.beginPath();ctx.arc(xx,yy,p.r*dpr,0,Math.PI*2);
+      ctx.fillStyle="rgba("+rgb+","+Math.max(.04,al)+")";ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+})();
+
+/* ═══════════════════════════════════════════════════
+   § VISUALIZER
+═══════════════════════════════════════════════════ */
+(function(){
+  var canvas=el("viz"),ctx=canvas.getContext("2d");
+  var dpr=window.devicePixelRatio||1;
+  function resize(){canvas.width=canvas.clientWidth*dpr;canvas.height=canvas.clientHeight*dpr}
+  resize();window.addEventListener("resize",resize);
+  var BARS=32;
+  function draw(){
+    var w=canvas.width,h=canvas.height;
+    ctx.clearRect(0,0,w,h);
+    var data=null;
+    if(state.playing&&state.analyserNode){
+      data=new Uint8Array(state.analyserNode.frequencyBinCount);
+      state.analyserNode.getByteFrequencyData(data);
+    }
+    var gap=w*.01;
+    var bw=(w-gap*(BARS-1))/BARS;
+    var rgb=T().rgb;
+    for(var i=0;i<BARS;i++){
+      var v;
+      if(data){
+        var idx=Math.floor(i/BARS*(data.length*.65));
+        v=data[idx]/255;
+      }else{
+        v=.032+.018*Math.sin(Date.now()/600+i);
+      }
+      var bh=Math.max(h*.03,v*h);
+      var x=i*(bw+gap),y=h-bh;
+      var g=ctx.createLinearGradient(0,y,0,h);
+      g.addColorStop(0,"rgba("+rgb+",.95)");
+      g.addColorStop(1,"rgba("+rgb+",.25)");
+      ctx.fillStyle=g;ctx.fillRect(x,y,bw,bh);
+    }
+    // lip-sync: amplitude → mouth openness
+    if(state.playing&&state.robotState==="singing"&&data){
+      var sum=0;for(var j=0;j<data.length;j++)sum+=data[j];
+      var amp=sum/data.length/255;
+      var oy=82+amp*16;
+      el("mouthP").setAttribute("d","M54 "+(84-amp*4).toFixed(1)+" Q75 "+oy.toFixed(1)+" 96 "+(84-amp*4).toFixed(1));
+    }
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+})();
+
+/* ═══════════════════════════════════════════════════
+   § WEATHER (Open-Meteo, no key needed) + fallback
+═══════════════════════════════════════════════════ */
+var DEFAULT_WEATHER={temperature:28,weathercode:0};
+function wcLabel(c){
+  if(c===0)return"Cerah";
+  if([1,2,3].includes(c))return"Berawan";
+  if([45,48].includes(c))return"Berkabut";
+  if([51,53,55,56,57].includes(c))return"Gerimis";
+  if([61,63,65,66,67,80,81,82].includes(c))return"Hujan";
+  if([71,73,75,77,85,86].includes(c))return"Salju";
+  if([95,96,99].includes(c))return"Badai";
+  return"Variasi";
+}
+function fetchWeather(){
+  if(!state.coords){state.weather=DEFAULT_WEATHER;return}
+  setStatus("Reading Sky...");
+  fetch("https://api.open-meteo.com/v1/forecast?latitude="+state.coords.lat+"&longitude="+state.coords.lon+"&current_weather=true",{signal:AbortSignal.timeout?AbortSignal.timeout(8000):undefined})
+    .then(function(r){if(!r.ok)throw new Error("weather http "+r.status);return r.json()})
+    .then(function(d){
+      state.weather=d.current_weather;
+      el("weatherLbl").textContent="⛅ "+wcLabel(state.weather.weathercode)+" "+Math.round(state.weather.temperature)+"°C";
+      setStatus("System Ready");
+    })
+    .catch(function(){
+      state.weather=DEFAULT_WEATHER;
+      el("weatherLbl").textContent="⛅ (offline)";
+      setStatus("System Ready");
+    });
+}
+function requestLocation(){
+  setErr(null);el("permBox").style.display="none";
+  setStatus("Acquiring Coords...");
+  if(!navigator.geolocation){
+    state.weather=DEFAULT_WEATHER;setStatus("System Ready");return;
+  }
+  navigator.geolocation.getCurrentPosition(
+    function(pos){
+      state.coords={lat:pos.coords.latitude,lon:pos.coords.longitude};
+      el("coordLbl").textContent="📍 "+state.coords.lat.toFixed(2)+", "+state.coords.lon.toFixed(2);
+      fetchWeather();
+    },
+    function(err){
+      state.weather=DEFAULT_WEATHER;
+      el("permTxt").textContent=err&&err.code===1?"Izin lokasi ditolak. Aktifkan di pengaturan browser dan coba lagi.":"Lokasi tidak tersedia. Lyria tetap berjalan.";
+      el("permBox").style.display="block";
+      setStatus("System Ready");
+    },
+    {timeout:10000}
+  );
+}
+el("permBtn").onclick=requestLocation;
+if(navigator.permissions&&navigator.permissions.query){
+  navigator.permissions.query({name:"geolocation"}).then(function(s){
+    if(s.state==="granted")requestLocation();
+    else{el("permBox").style.display="block";if(s.state==="prompt")requestLocation()}
+  }).catch(function(){el("permBox").style.display="block";requestLocation()});
+}else{requestLocation()}
+
+/* ═══════════════════════════════════════════════════
+   § LOCAL LYRIC GENERATOR — no API key, fully offline
+═══════════════════════════════════════════════════ */
+var LYRIC_TEMPLATES={
+  Cerah:[
+    ["Mentari pagi menyapamu dengan sinar cerah,","Hari ini indah, semangat menggelora,","Cuaca {label} menyambut langkahmu,","Bangun dan raih harimu yang luar biasa!"],
+    ["Pagi cerah memanggil namamu,","Langit biru menari bersamamu,","Suhu {suhu} derajat menemani pagi,","Yuk bangkit, hari indah menanti!"]
+  ],
+  Berawan:[
+    ["Awan bermain di langit pagi ini,","Suhu {suhu} derajat cukup sejuk terasa,","Selimut nyaman tak perlu terlalu lama,","Bangun yuk, hari menantimu!"],
+    ["Pagi {label} tak menghalangi semangatmu,","Bangkit dan sambut hari dengan senyum,","Bawa payung jika perlu kemana-mana,","Kamu pasti bisa hari ini!"]
+  ],
+  Hujan:[
+    ["Hujan pagi menemanimu bangun,","Suhu {suhu} derajat sejuk menyentuh kalbu,","Jangan lupa payung saat keluar nanti,","Selamat pagi, semangat pagi hari!"],
+    ["Rintik hujan bernyanyi di atap pagi,","Cuaca basah tak menyurutkan semangatmu,","Hangatkan dirimu sebelum melangkah,","Hari baru menantimu!"]
+  ],
+  Gerimis:[
+    ["Gerimis lembut menyapa pagi ini,","Suhu {suhu} derajat segar dan nyaman,","Jaga kesehatan di cuaca seperti ini,","Selamat pagi, ayo semangat!"],
+    ["Tetes gerimis mengiringi paginya,","Langit abu-abu bukan alasan berdiam,","Bangkit dan hadapi hari dengan berani,","Lyria menemanimu setiap pagi!"]
+  ],
+  default:[
+    ["Selamat pagi, sinar matahari menyapa,","Suhu {suhu} derajat menemani harimu,","Bangkit dari tempat tidurmu sekarang,","Hari baru penuh peluang menantimu!"],
+    ["Waktunya membuka mata dan bangkit,","Pagi ini Lyria menyapamu hangat,","Tarik napas dalam dan mulai harimu,","Semangat selalu menemanimu!"]
+  ]
+};
+var AGENDA_LINES=[
+  "Agenda pertama: {item}.",
+  "Jangan lupa, {item} menantimu.",
+  "Segera siapkan dirimu untuk {item}.",
+  "Ingat ya, {item} ada hari ini."
+];
+function generateLyrics(weather,agenda){
+  var wLabel=wcLabel(weather.weathercode);
+  var suhu=Math.round(weather.temperature);
+  var pool=LYRIC_TEMPLATES[wLabel]||LYRIC_TEMPLATES.default;
+  var base=pick(pool).map(function(l){return l.replace("{label}",wLabel).replace("{suhu}",suhu)});
+  var items=(agenda||"").split(/[\n,]/).map(function(s){return s.trim()}).filter(Boolean);
+  if(items.length){
+    var agLine=pick(AGENDA_LINES).replace("{item}",items[0].toLowerCase());
+    base[2]=agLine;
+    if(items.length>1)base[3]="Setelah itu: "+items[1].toLowerCase()+". Semangat!";
+  }
+  return base;
+}
+function buildAnnouncementLines(weather,agenda){
+  var wLabel=wcLabel(weather.weathercode);
+  var suhu=Math.round(weather.temperature);
+  var lines=["Selamat pagi, waktunya bangun."];
+  lines.push("Hari ini cuaca "+wLabel.toLowerCase()+".");
+  lines.push("Suhu "+suhu+" derajat.");
+  var items=(agenda||"").split(/[\n,]/).map(function(s){return s.trim()}).filter(Boolean);
+  if(items.length)lines.push("Agenda pertama: "+items[0]+".");
+  else lines.push("Hari ini tidak ada agenda, santai saja.");
+  if(items.length>1)lines.push("Jangan lupa "+items[1].toLowerCase()+".");
+  lines.push("Semoga harimu menyenangkan.");
+  return lines;
+}
+
+/* ═══════════════════════════════════════════════════
+   § MELODY SYNTHESIS (default alarm sound)
+═══════════════════════════════════════════════════ */
+var SCALE_WARM=[261.6,293.7,329.6,392,440];
+var SCALE_BRIGHT=[293.7,349.2,392,440,523.3];
+var activeOscs=[];
+function playMelody(analyser,temperature,agendaCount,onDone){
+  var ctx=getAudioCtx();if(!ctx){setTimeout(onDone,200);return}
+  var scale=temperature>=24?SCALE_BRIGHT:SCALE_WARM;
+  var steps=16+Math.min(agendaCount,6)*2;
+  var notes=[];for(var i=0;i<steps;i++)notes.push(scale[(i*3+Math.floor(i/2))%scale.length]);
+  var noteDur=.32;var t0=ctx.currentTime;
+  var mGain=ctx.createGain();mGain.gain.value=.16;
+  mGain.connect(analyser);
+  activeOscs=[];
+  notes.forEach(function(freq,i){
+    var osc=ctx.createOscillator(),g=ctx.createGain();
+    osc.type=i%4===0?"triangle":"sine";osc.frequency.value=freq;
+    var ts=t0+i*noteDur;
+    g.gain.setValueAtTime(.0001,ts);
+    g.gain.linearRampToValueAtTime(.85,ts+.04);
+    g.gain.exponentialRampToValueAtTime(.0001,ts+noteDur*.96);
+    osc.connect(g);g.connect(mGain);osc.start(ts);osc.stop(ts+noteDur);
+    activeOscs.push(osc);
+  });
+  var durMs=(notes.length*noteDur+.2)*1000;
+  var tm=setTimeout(onDone,durMs);
+  state.pendingTimers.push(tm);
+}
+function stopOscillators(){
+  activeOscs.forEach(function(o){safe(function(){o.stop()})});
+  activeOscs=[];
+}
+
+/* ═══════════════════════════════════════════════════
+   § MP3 UPLOAD
+═══════════════════════════════════════════════════ */
+var MAX_FILE_MB=20;
+function setupRingtoneInput(){
+  var inp=el("ringtoneInput");
+  inp.onchange=function(ev){
+    var file=ev.target.files&&ev.target.files[0];
+    if(!file)return;
+    if(!/^audio\//i.test(file.type)&&!/\.(mp3|wav|ogg|aac|m4a|flac)$/i.test(file.name)){
+      setErr("Format tidak didukung. Pilih file MP3, WAV, OGG, atau AAC.");return;
+    }
+    if(file.size>MAX_FILE_MB*1024*1024){
+      setErr("Ukuran file terlalu besar (maks "+MAX_FILE_MB+" MB).");return;
+    }
+    setErr(null);
+    if(state.ringtoneUrl){URL.revokeObjectURL(state.ringtoneUrl)}
+    state.ringtoneUrl=URL.createObjectURL(file);
+    state.ringtoneSourceCreated=false; // reset agar MediaElementSource bisa dibuat ulang
+    el("ringtoneArea").innerHTML='<div class="ringtone-box"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:6px">'+file.name+'</span><button class="x-btn" id="clearRingtone">✕</button></div>';
+    el("ringtoneHint").textContent="Akan dipakai sebagai nada dering saat alarm berbunyi.";
+    el("clearRingtone").onclick=function(){
+      if(state.ringtoneUrl)URL.revokeObjectURL(state.ringtoneUrl);
+      state.ringtoneUrl=null;state.ringtoneEl=null;state.ringtoneSourceCreated=false;
+      el("ringtoneArea").innerHTML='<label class="ringtone-upload">🎵 Pilih file audio dari perangkat<input type="file" id="ringtoneInput" accept="audio/*,audio/mpeg,audio/mp3,audio/wav,audio/ogg,audio/aac" style="display:none"/></label>';
+      el("ringtoneHint").textContent="Tanpa nada dering, Lyria memakai melodi bawaan.";
+      setupRingtoneInput();
+    };
+    LS.set("ringtoneName",file.name); // simpan nama untuk UI info
+  };
+}
+setupRingtoneInput();
+
+function playRingtone(analyser,onDone){
+  var ctx=getAudioCtx();
+  if(!ctx||!state.ringtoneUrl){return false}
+  try{
+    // Buat Audio element baru atau re-use. JANGAN buat MediaElementSource dua kali
+    // untuk elemen yang sama (browser akan throw InvalidStateError).
+    if(!state.ringtoneEl||state.ringtoneEl.src!==state.ringtoneUrl){
+      state.ringtoneEl=new Audio();
+      state.ringtoneEl.crossOrigin="anonymous";
+      state.ringtoneEl.src=state.ringtoneUrl;
+      state.ringtoneSourceCreated=false;
+    }
+    if(!state.ringtoneSourceCreated){
+      var src=ctx.createMediaElementSource(state.ringtoneEl);
+      src.connect(analyser);
+      state.ringtoneSourceCreated=true;
+    }
+    state.ringtoneEl.currentTime=0;
+    state.ringtoneEl.onended=onDone;
+    state.ringtoneEl.onerror=function(){setErr("File audio gagal diputar, menggunakan melodi bawaan.");onDone()};
+    state.ringtoneEl.play().catch(function(e){
+      console.warn("[Lyria] ringtone play failed",e);
+      onDone(); // fallback ke melody
+    });
+    return true;
+  }catch(e){
+    console.warn("[Lyria] ringtone error",e);
+    state.ringtoneEl=null;state.ringtoneSourceCreated=false;
+    return false;
+  }
+}
+function stopRingtone(){
+  if(state.ringtoneEl){safe(function(){state.ringtoneEl.pause();state.ringtoneEl.currentTime=0})}
+}
+
+/* ═══════════════════════════════════════════════════
+   § LYRICS DISPLAY
+═══════════════════════════════════════════════════ */
+function renderLyrics(){
+  var box=el("lyricsBox");box.innerHTML="";
+  if(!state.playing||!state.activeLyrics.length)return;
+  var t=T();
+  state.activeLyrics.forEach(function(line,i){
+    var d=document.createElement("div");
+    d.className="lyric-line"+(i===state.activeLine?" active":"");
+    d.style.color=i===state.activeLine?t.accent:"rgba("+t.rgb+",.5)";
+    d.textContent=line;box.appendChild(d);
+  });
+}
+function startLyricSync(totalMs,lines){
+  if(state.activeLyricInterval)clearInterval(state.activeLyricInterval);
+  state.activeLine=-1;
+  if(!lines.length)return;
+  var step=totalMs/lines.length;
+  state.activeLyricInterval=setInterval(function(){
+    if(state.activeLine+1<lines.length){state.activeLine++;renderLyrics()}
+  },step);
+}
+
+/* ═══════════════════════════════════════════════════
+   § ALARM — core
+═══════════════════════════════════════════════════ */
+function setErr(msg){el("errorMsg").style.display=msg?"block":"none";if(msg)el("errorMsg").textContent=msg}
+function setStatus(s){el("statusLine").textContent=s}
+
+function clearPending(){
+  state.pendingTimers.forEach(function(id){clearTimeout(id)});state.pendingTimers=[];
+  if(state.activeLyricInterval){clearInterval(state.activeLyricInterval);state.activeLyricInterval=null}
+}
+
+function finishPlayback(disarmCheck){
+  clearPending();stopOscillators();stopRingtone();
+  safe(function(){if(window.speechSynthesis)window.speechSynthesis.cancel()});
+  state.playing=false;state.alarmAnnouncing=false;
+  state.activeLyrics=[];state.activeLine=-1;
+  setStatus("System Ready");el("lyricsBox").innerHTML="";
+  el("robotBody").classList.remove("bounce-anim");
+  state.robotState="idle";setExpr(idlePool()[0]);
+  el("testBtn").disabled=false;el("testBtn").textContent="▶ TES SIARAN SEKARANG";
+  el("alarmControls").style.display="none";
+  if(disarmCheck&&!el("repeatDaily").checked){
+    state.armed=false;
+    el("armBtn").textContent="⏻ OFF";el("armBtn").classList.remove("armed");
+    el("armBtn").style.cssText="";
+    el("armHint").textContent="Alarm selesai (tidak diulang).";
+  }
+}
+
+function stopAlarmNow(userInit){
+  if(!state.playing)return;
+  safe(function(){if(window.speechSynthesis)window.speechSynthesis.cancel()});
+  stopOscillators();stopRingtone();clearPending();stopMouthTalk();
+  if(userInit){changeMood(10);showBubble("Oke! Selamat beraktivitas.");speak("Selamat beraktivitas.")}
+  finishPlayback(true);
+}
+
+function snoozeAlarm(){
+  stopOscillators();stopRingtone();clearPending();
+  safe(function(){if(window.speechSynthesis)window.speechSynthesis.cancel()});
+  stopMouthTalk();
+  state.playing=false;state.alarmAnnouncing=false;
+  el("robotBody").classList.remove("bounce-anim");
+  el("alarmControls").style.display="none";
+  el("testBtn").disabled=false;el("testBtn").textContent="▶ TES SIARAN SEKARANG";
+  el("lyricsBox").innerHTML="";state.activeLyrics=[];state.activeLine=-1;
+  var sn=new Date(Date.now()+5*60000);
+  var newTime=pad(sn.getHours())+":"+pad(sn.getMinutes());
+  el("alarmTime").value=newTime;
+  LS.set("alarmTime",newTime);
+  state.triggered=false;
+  el("armHint").textContent="Snooze 5 mnt — alarm berikutnya jam "+newTime+".";
+  showBubble("Oke, 5 menit lagi ya."); speak("Baik, lima menit lagi.");
+  state.robotState="idle";setExpr("mengantuk");changeMood(-1);
+}
+
+function checkAlarm(now){
+  if(!state.armed||!el("alarmTime").value||state.playing)return;
+  var cur=pad(now.getHours())+":"+pad(now.getMinutes());
+  if(cur===el("alarmTime").value&&!state.triggered){
+    state.triggered=true;
+    triggerAlarm();
+  }
+  if(cur!==el("alarmTime").value)state.triggered=false;
+}
+
+function triggerAlarm(){
+  if(state.playing)return;
+  var w=state.weather||DEFAULT_WEATHER;
+  var agenda=el("agenda").value||"";
+  state.playing=true;state.alarmAnnouncing=true;
+  el("testBtn").disabled=true;el("testBtn").textContent="ON AIR...";
+  el("alarmControls").style.display="flex";
+  safe(function(){if(navigator.vibrate)navigator.vibrate([300,100,300,100,300])});
+
+  // 1) sleep → wake animation
+  state.robotState="sleep";setExpr("tidur");
+  var t1=setTimeout(function(){
+    state.robotState="wakeup";setExpr("kaget",{shake:true});robotBeep(200,750,.28);
+    var t2=setTimeout(function(){
+      setExpr("tersenyum",{nod:true});showBubble("Pagiii~ Bangun yuk!");
+      setStatus("Speaking...");state.robotState="speaking";
+      // 2) speak announcement
+      speakSeq(buildAnnouncementLines(w,agenda)).then(function(){
+        if(!state.playing)return;
+        startMusicPhase(w,agenda);
+      });
+    },680);state.pendingTimers.push(t2);
+  },850);state.pendingTimers.push(t1);
+}
+
+function startMusicPhase(w,agenda){
+  if(!state.playing)return;
+  setStatus("Composing Melody...");
+  state.robotState="thinking";setExpr("berpikir");
+
+  var lyrics=generateLyrics(w,agenda);
+  state.activeLyrics=lyrics;state.activeLine=-1;
+  renderLyrics();
+
+  var ctx=getAudioCtx();
+  if(!ctx){
+    // AudioContext unavailable — still show lyrics & animation without sound
+    setStatus("On Air");state.robotState="singing";setExpr("bernyanyi",{bounce:true,keepBounce:true});
+    el("robotBody").classList.add("bounce-anim");
+    startLyricSync(8000,lyrics);
+    var tf=setTimeout(function(){onAlarmEnd()},8200);state.pendingTimers.push(tf);
+    return;
+  }
+
+  var analyser=getAnalyser();
+  setStatus("On Air");state.robotState="singing";setExpr("bernyanyi",{keepBounce:true});
+  el("robotBody").classList.add("bounce-anim");
+
+  var agCount=agenda.split(/[\n,]/).map(function(s){return s.trim()}).filter(Boolean).length;
+  var noteDur=.32;
+  var steps=16+Math.min(agCount,6)*2;
+  var totalMelodyMs=(steps*noteDur+.2)*1000;
+
+  var ringPlayed=false;
+  if(state.ringtoneUrl){
+    ringPlayed=playRingtone(analyser,function(){onAlarmEnd()});
+    if(ringPlayed){
+      // estimate duration for lyric sync (can't know for sure without metadata)
+      var audEl=state.ringtoneEl;
+      if(audEl){
+        audEl.addEventListener("loadedmetadata",function(){
+          var durMs=isFinite(audEl.duration)?audEl.duration*1000:8000;
+          startLyricSync(durMs,lyrics);
+        },{once:true});
+        // fallback if metadata doesn't fire
+        setTimeout(function(){if(state.activeLine<0)startLyricSync(8000,lyrics)},500);
+      }
+    }
+  }
+  if(!ringPlayed){
+    startLyricSync(totalMelodyMs,lyrics);
+    playMelody(analyser,w.temperature,agCount,function(){onAlarmEnd()});
+  }
+}
+
+function onAlarmEnd(){
+  if(!state.playing)return;
+  changeMood(2);showBubble("Sampai jumpa besok!");
+  finishPlayback(true);
+}
+
+/* ARM BUTTON */
+el("armBtn").onclick=function(){
+  state.armed=!state.armed;
+  el("armBtn").textContent=state.armed?"⏻ ARMED":"⏻ OFF";
+  el("armBtn").classList.toggle("armed",state.armed);
+  if(!state.armed){
+    el("armBtn").style.cssText="";el("armHint").textContent="";
+  }else{
+    getAudioCtx(); // prime AudioContext via user gesture — critical for alarm to work
+    var t=el("alarmTime").value;
+    el("armHint").textContent=t?"Alarm aktif untuk "+t+". Jaga tab & layar tetap aktif.":"Atur waktu alarm di bawah.";
+  }
+  LS.set("armed",state.armed);
+};
+el("alarmTime").onchange=function(){
+  LS.set("alarmTime",el("alarmTime").value);
+  if(state.armed&&el("alarmTime").value)el("armHint").textContent="Alarm aktif untuk "+el("alarmTime").value+".";
+  state.triggered=false;
+};
+el("agenda").oninput=function(){LS.set("agenda",el("agenda").value)};
+el("repeatDaily").onchange=function(){LS.set("repeatDaily",el("repeatDaily").checked)};
+el("snoozeBtn").onclick=snoozeAlarm;
+el("stopBtn").onclick=function(){stopAlarmNow(true)};
+el("testBtn").onclick=function(){getAudioCtx();triggerAlarm()};
+
+/* ═══════════════════════════════════════════════════
+   § RESTORE FROM LOCALSTORAGE
+═══════════════════════════════════════════════════ */
+(function restore(){
+  var at=LS.get("alarmTime","");if(at)el("alarmTime").value=at;
+  var ag=LS.get("agenda","");if(ag)el("agenda").value=ag;
+  var rd=LS.get("repeatDaily",true);el("repeatDaily").checked=rd;
+  // armed state is NOT restored automatically — require user to re-arm each session for safety
+  // theme restored at top
+})();
+
+/* ═══════════════════════════════════════════════════
+   § BOOT SEQUENCE
+═══════════════════════════════════════════════════ */
+(function boot(){
+  var pct=0;
+  var msgs=["INITIALIZING COMPANION...","CALIBRATING EYES...","WARMING UP VOICE...","LOADING PERSONALITY...","READY"];
+  var msgIdx=0;
+  var iv=setInterval(function(){
+    pct+=Math.random()*18+7;if(pct>100)pct=100;
+    el("bootBar").style.width=pct+"%";
+    var ni=Math.min(msgs.length-1,Math.floor(pct/100*msgs.length));
+    if(ni!==msgIdx){msgIdx=ni;el("bootSub").textContent=msgs[msgIdx]}
+    if(pct>=100){
+      clearInterval(iv);
+      setTimeout(function(){
+        el("bootOverlay").classList.add("hide");
+        setTimeout(function(){el("bootOverlay").style.display="none"},560);
+        changeMood(5);showBubble("Halo! Aku Lyria.");speak("Halo, aku Lyria.");
+      },260);
+    }
+  },120);
+})();
+
+applyTheme();
+})();
+</script>
+</body>
+</html>
